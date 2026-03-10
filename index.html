@@ -172,7 +172,7 @@ img, .image-container {
         :root {
             --stage-width: 1280px;
             --stage-height: 720px;
-            --chrome-gap: 28px;
+            --fit-scale: 1;
             --shadow: 0 20px 60px rgba(0, 0, 0, 0.16);
         }
 
@@ -236,18 +236,18 @@ img, .image-container {
         }
 
         .slide-shell {
+            width: 100%;
+            max-width: none;
+            padding: 0;
             align-items: center;
             justify-content: center;
         }
 
         .slide-viewport {
-            --scale: min(
-                calc((100vw - var(--chrome-gap) * 2) / 1280),
-                calc((100dvh - var(--chrome-gap) * 2) / 720)
-            );
-            width: calc(var(--stage-width) * var(--scale));
-            height: calc(var(--stage-height) * var(--scale));
+            width: calc(var(--stage-width) * var(--fit-scale));
+            height: calc(var(--stage-height) * var(--fit-scale));
             position: relative;
+            flex: 0 0 auto;
         }
 
         .ppt-stage {
@@ -257,7 +257,7 @@ img, .image-container {
             left: 0;
             top: 0;
             transform-origin: top left;
-            transform: scale(var(--scale));
+            transform: scale(var(--fit-scale));
             box-shadow: var(--shadow);
             overflow: hidden;
         }
@@ -269,7 +269,9 @@ img, .image-container {
         }
 
         .ppt-image {
-            object-fit: contain;
+            max-width: none;
+            max-height: none;
+            object-fit: fill;
         }
 
         .ppt-text {
@@ -285,11 +287,15 @@ img, .image-container {
 
         .slide-index {
             position: absolute;
-            left: 8px;
-            bottom: -24px;
+            left: 12px;
+            top: 10px;
             font-size: 12px;
             letter-spacing: 0.14em;
             color: #5f5a54;
+            z-index: 20;
+            background: rgba(255, 255, 255, 0.72);
+            padding: 4px 8px;
+            border-radius: 999px;
         }
 
         .reveal {
@@ -306,12 +312,6 @@ img, .image-container {
         @media (max-width: 900px), (max-height: 700px) {
             .nav-dots {
                 right: 10px;
-            }
-            .slide-viewport {
-                --scale: min(
-                    calc((100vw - 18px) / 1280),
-                    calc((100dvh - 18px) / 720)
-                );
             }
         }
     </style>
@@ -429,13 +429,16 @@ img, .image-container {
                 this.scrollLock = false;
                 this.touchStartY = 0;
                 this.touchEndY = 0;
+                this.updateStageScale = this.updateStageScale.bind(this);
                 this.setupIntersectionObserver();
                 this.setupNavDots();
                 this.setupKeyboardNav();
                 this.setupWheelNav();
                 this.setupTouchNav();
+                this.updateStageScale();
                 this.updateProgressBar();
                 window.addEventListener('scroll', () => this.updateProgressBar(), { passive: true });
+                window.addEventListener('resize', this.updateStageScale, { passive: true });
             }
 
             goToSlide(index) {
@@ -481,6 +484,15 @@ img, .image-container {
                 const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
                 const progress = maxScroll <= 0 ? 0 : window.scrollY / maxScroll;
                 this.progressBar.style.transform = `scaleX(${progress})`;
+            }
+
+            updateStageScale() {
+                const horizontalPadding = 40;
+                const verticalPadding = 40;
+                const availableWidth = Math.max(window.innerWidth - horizontalPadding, 320);
+                const availableHeight = Math.max(window.innerHeight - verticalPadding, 240);
+                const scale = Math.min(availableWidth / 1280, availableHeight / 720);
+                document.documentElement.style.setProperty('--fit-scale', String(Math.max(scale, 0.1)));
             }
 
             setupKeyboardNav() {
